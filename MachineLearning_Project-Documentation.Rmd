@@ -1,0 +1,141 @@
+---
+title: "MachineLearning_Project"
+author: "Venkata"
+date: "June 18, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Data related to the execution of an exercise is provided.
+In the data, there are 6 participants and 5 classe variables. The 5 classe variables are    
+1.exactly according to the specification (Class A),   
+2.throwing the elbows to the front (Class B),   
+3.lifting the dumbbell only halfway (Class C),   
+4.lowering the dumbbell only halfway (Class D)   
+5.throwing the hips to the front (Class E).   
+
+### GOAL: 
+predict the manner in which the participants did the excercise.
+
+### Step1:
+
+Since participants have performed correctly and incorrectly, first step above all would be to look at
+all the participants and classA-variable to see if there are any noticeable points to note.
+
+### step2:
+In the column new_window, there are only 2 values. 'yes' and 'no'. Considered the data with value = 'no' as there are more records with value 'no' (19216).
+```{r include=FALSE}
+library(caret);
+library(ggplot2);
+library(lattice);
+setwd("C:/Users/Venkata/Desktop/Personal/Coursera/Data_Science_Specialization/Machine_Learning/assignment");
+data <- read.csv("pml-training.csv")
+#stats of the data.
+colnames(data)
+dim(data)
+summary(data)
+yes_window <- data[data$new_window=='yes',]
+no_window <- data[data$new_window == 'no',]
+data_subset <- no_window
+dim(data_subset)
+```
+
+#Step3: 
+Detemine what columns to use.
+
+- Since the data could include both numeric and factor variables that could determine the performance of the model, for now, 
+only the numeric data is considered.
+
+```{r include=FALSE}
+library(ggplot2)
+colnames(data_subset)
+listed_data <- as.list(data_subset)
+column_class <- sapply(X= listed_data, FUN=class)
+col_factor <- which(column_class=="factor")
+numeric_columns <- which(column_class =="numeric")
+temp_results <- sapply(X=data_subset[,numeric_columns], FUN=quantile, na.rm = TRUE)
+dim(temp_results)
+sub_data_subset <- numeric_columns[which(!is.na(temp_results[1,]))]
+sub_data_subset
+length(sub_data_subset)
+useful_data_subset <- data_subset[,sub_data_subset]
+colnames(useful_data_subset)
+useful_data_subset$classe <- data_subset$classe
+useful_data_subset$user_name <- data_subset$user_name
+useful_data_subset <- useful_data_subset[,-27]
+useful_data_subset <- useful_data_subset[,-26]
+useful_data_subset <- useful_data_subset[,-19]
+```
+
+- I implemented cross-validation with cv-folds = 5 and cv-folds = 10. Keeping my computer's hardware in mind.
+
+```{r include=FALSE}
+library(randomForest)
+library(caret)
+inTrain <- createDataPartition(y=useful_data_subset$classe, p=0.75, list=FALSE)
+inTrain
+training <- useful_data_subset[inTrain,]
+testing <- useful_data_subset[-inTrain,]
+colnames(training)
+res = cross_validation <- rfcv(trainx=training[,-25], trainy=training[,25], cv.fold=5, step=0.5, recursive=FALSE)
+```
+
+- Plotted a predictors graph to see how many variables are required to determine the number of columns to consider. There are around 7-10 variables that play a vital role in determining the execution of the exercise.
+
+```{r}
+with(res, plot(n.var,error.cv,log="x",type= "o", lwd=2))
+```
+
+- In order to find the columns, I used Gini Index to look at the 'MeanDecreaseGini' variable and picked the top 9 columns with maximum MeanDecreaseGini value for the analysis.
+
+```{r include=FALSE}
+train_rf <- randomForest(training$classe~ .,data = training)
+train_rf$confusion
+print(train_rf)
+round(importance(train_rf),2)
+rf1 <- sort(importance(train_rf)[,'MeanDecreaseGini'],decreasing = TRUE)
+col <- which(round(importance(train_rf),2)[,1] >451)
+col
+col <- c("roll_belt", "pitch_belt","yaw_belt","yaw_arm","roll_dumbbell","yaw_dumbbell","gyros_dumbbell_y","roll_forearm","pitch_forearm")
+train_classe <- training[,col]
+colnames(train_classe)
+head(train_classe)
+colnames(training)
+train_classe$classe <- training[,'classe']
+train_rf2 <- randomForest(train_classe$classe~ .,data = train_classe)
+
+```
+
+- I implemented random forest model to determine the execution of exercise by each participant using the training dataset.
+
+- Not much emphasis was given on handling the out of sample error. I moved on to the implementation of the model.
+
+- I then considered the test dataset that has 20 test cases, retrieved only those columns used for the training model and predicted the results for the 20 test-cases in the test dataset.
+
+```{r include=FALSE}
+test_data <- read.csv("pml-testing.csv")
+test_data$problem_id
+required_columns <- test_data[,col]
+colnames(required_columns)
+colnames(train_classe)
+## Applying the model to the other test-dataset given to us.
+colnames(required_columns)
+listed_data <- as.list(required_columns)
+listed_data
+column_class <- sapply(X= listed_data, FUN=class)
+col_factor <- which(column_class=="factor")
+col_factor
+numeric_columns <- which(column_class =="numeric")
+temp_results <- sapply(X=required_columns[,numeric_columns], FUN=quantile, na.rm = TRUE)
+dim(temp_results)
+sub_testdata_subset <- numeric_columns[which(!is.na(temp_results[1,]))]
+sub_testdata_subset
+length(sub_testdata_subset)
+useful_testdata_subset <- required_columns[,sub_testdata_subset]
+colnames(useful_testdata_subset)
+output<-predict(train_rf2, useful_testdata_subset, type="class")
+```

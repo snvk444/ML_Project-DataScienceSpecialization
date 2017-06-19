@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+author: "Venkata"
+date: "June 18, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Data related to the execution of an exercise is provided.
+In the data, there are 6 participants and 5 classe variables. The 5 classe variables are  
+1.exactly according to the specification (Class A),   
+2.throwing the elbows to the front (Class B),   
+3.lifting the dumbbell only halfway (Class C),   
+4.lowering the dumbbell only halfway (Class D)   
+5.throwing the hips to the front (Class E).   
+
+## GOAL: 
+predict the manner in which the participants did the excercise.
+
+### Step1:
+Since participants have performed correctly and incorrectly, first step above all would be to look at
+all the participants and classA-variable to see if there are any noticeable points to note.
+### step2:
+In the column new_window, there are only 2 values. 'yes' and 'no'. Considered the data with value = 'no' as there are more records with value 'no' (19216).
+```{r include=FALSE}
+library(caret);
+library(ggplot2);
+library(lattice);
+setwd("C:/Users/Venkata/Desktop/Personal/Coursera/Data_Science_Specialization/Machine_Learning/assignment");
+data <- read.csv("pml-training.csv")
+#stats of the data.
+colnames(data)
+dim(data)
+summary(data)
+yes_window <- data[data$new_window=='yes',]
+no_window <- data[data$new_window == 'no',]
+data_subset <- no_window
+dim(data_subset)
+```
+
+#Step3: 
+Detemine what columns to use.
+- Since the data could include both numeric and factor variables that could determine the performance of the model, for now, 
+only the numeric data is considered.
+
+```{r include=FALSE}
+library(ggplot2)
+colnames(data_subset)
+listed_data <- as.list(data_subset)
+column_class <- sapply(X= listed_data, FUN=class)
+col_factor <- which(column_class=="factor")
+numeric_columns <- which(column_class =="numeric")
+temp_results <- sapply(X=data_subset[,numeric_columns], FUN=quantile, na.rm = TRUE)
+dim(temp_results)
+sub_data_subset <- numeric_columns[which(!is.na(temp_results[1,]))]
+sub_data_subset
+length(sub_data_subset)
+useful_data_subset <- data_subset[,sub_data_subset]
+colnames(useful_data_subset)
+useful_data_subset$classe <- data_subset$classe
+useful_data_subset$user_name <- data_subset$user_name
+```
+- I implemented cross-validation with cv-folds = 5 and cv-folds = 10. Keeping my computer's hardware in mind.
+```{r include=FALSE}
+library(randomForest)
+library(caret)
+inTrain <- createDataPartition(y=useful_data_subset$classe, p=0.75, list=FALSE)
+inTrain
+training <- useful_data_subset[inTrain,]
+testing <- useful_data_subset[-inTrain,]
+colnames(training)
+res = cross_validation <- rfcv(trainx=training[,-26], trainy=training[,26], cv.fold=5, step=0.5, recursive=FALSE)
+```

@@ -1,0 +1,24 @@
+---
+title: "Machine Learning - Assignment"
+author: "Venkata"
+date: "November 13, 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+Assignment is to understand the data about the activity done by 6 participants. Goal is to predict the manner
+in which they did the excercise. Variable considered is the "classe" variable.
+
+
+Below is the study design I followed to determine the predictors.  
+1. Read the input data.  
+2. Split the data into training and testing data.  
+3. Understand the relationship between different variables in the data with 'classe' variable.  
+4. Identify a few variables that show a high dependency on the variability if 'classe' variable.  
+5. Train a few models with classe and the few vaiables that are considered in the previous step.  
+6. Do model comparison to identify which model gives better accuracy.  
+
